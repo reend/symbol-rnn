@@ -4,6 +4,14 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <algorithm>
+#include <cmath>
+
+std::vector<float> one_hot(int idx, int vocab_size) {
+    std::vector<float> v(vocab_size, 0.0f);
+    v[idx] = 1.0f;
+    return v;
+}
 
 struct Matrix {
     int rows, cols;
@@ -20,10 +28,12 @@ void randomize(Matrix& m, float scale) {
         v = ((float)rand() / RAND_MAX * 2 - 1) * scale;
 }
 
-std::vector<float> one_hot(int idx, int vocab_size) {
-    std::vector<float> v(vocab_size, 0.0f);
-    v[idx] = 1.0f;
-    return v;
+std::vector<float> matvec(const Matrix& m, const std::vector<float>& v) {
+    std::vector<float> out(m.rows, 0.0f);
+    for (int r = 0; r < m.rows; r++)
+        for (int c = 0; c < m.cols; c++)
+            out[r] += m.at(r, c) * v[c];
+    return out;
 }
 
 int main() {
