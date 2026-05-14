@@ -36,6 +36,38 @@ std::vector<float> matvec(const Matrix& m, const std::vector<float>& v) {
     return out;
 }
 
+std::vector<float> add(const std::vector<float>& a, const std::vector<float>& b) {
+    std::vector<float> out(a.size());
+    for (int i = 0; i < a.size(); i++) {
+        out[i] = a[i] + b[i];
+    }
+    return out;
+}
+
+std::vector<float> tanh_vec(const std::vector<float>& v) {
+    std::vector<float> out(v.size());
+    for (int i = 0; i < v.size(); i++) {
+        out[i] = std::tanh(v[i]);
+    }
+    return out;
+}
+
+std::vector<float> softmax(const std::vector<float>& v) {
+    std::vector<float> out(v.size());
+    float max_v = *std::max_element(v.begin(), v.end());
+    float sum = 0.0f;
+    for (int i = 0; i < v.size(); i++) {
+        out[i] = std::exp(v[i] - max_v);
+        sum += out[i];
+    }
+    for (float &x : out) x /= sum;
+    return out;
+}
+
+float cross_entropy(const std::vector<float>& probs, int target) {
+    return -std::log(probs[target] + 1e-8f);
+}
+
 int main() {
     std::ifstream file("data/input.txt");
     std::string text((std::istreambuf_iterator<char>(file)),
@@ -57,6 +89,8 @@ int main() {
     for (char c : text)
         data.push_back(char_to_idx[c]);
 
+    // W initialization
+
     const int hidden_size = 128;
     const int vocab_size = idx_to_char.size();
 
@@ -70,6 +104,24 @@ int main() {
     randomize(Wxh, 0.01f);
     randomize(Whh, 0.01f);
     randomize(Why, 0.01f);
+
+    // forward pass
+
+    std::vector<float> h(hidden_size, 0.0f);
+    std::vector<float> x = one_hot(data[0], vocab_size);
+
+    std::vector<float> a1 = matvec(Wxh, x);
+    std::vector<float> a2 = matvec(Whh, h);
+    std::vector<float> a3 = add(add(a1, a2), bh.data);
+    std::vector<float> h1 = tanh_vec(a3);
+
+    std::vector<float> y = add(matvec(Why, h1), by.data);
+    std::vector<float> p = softmax(y);
+
+    float loss = cross_entropy(p, data[1]);
+
+    std::cout << "loss: " << loss << "\n";
+    std::cout << "predicted: " << idx_to_char[std::max_element(p.begin(), p.end()) - p.begin()] << "\n";
 
     return 0;
 }
