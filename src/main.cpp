@@ -107,21 +107,35 @@ int main() {
 
     // forward pass
 
+    const int seq_len = 25;
+
     std::vector<float> h(hidden_size, 0.0f);
-    std::vector<float> x = one_hot(data[0], vocab_size);
 
-    std::vector<float> a1 = matvec(Wxh, x);
-    std::vector<float> a2 = matvec(Whh, h);
-    std::vector<float> a3 = add(add(a1, a2), bh.data);
-    std::vector<float> h1 = tanh_vec(a3);
+    std::vector<std::vector<float>> xs, hs, ps;
+    hs.push_back(h);
 
-    std::vector<float> y = add(matvec(Why, h1), by.data);
-    std::vector<float> p = softmax(y);
+    float total_loss = 0.0f;
 
-    float loss = cross_entropy(p, data[1]);
+    for (int t = 0; t < seq_len; t++) {
 
-    std::cout << "loss: " << loss << "\n";
-    std::cout << "predicted: " << idx_to_char[std::max_element(p.begin(), p.end()) - p.begin()] << "\n";
+        std::vector<float> x = one_hot(data[t], vocab_size);
+
+        std::vector<float> a1 = matvec(Wxh, x);
+        std::vector<float> a2 = matvec(Whh, hs.back());
+        std::vector<float> a3 = add(add(a1, a2), bh.data);
+        std::vector<float> h1 = tanh_vec(a3);
+
+        std::vector<float> y = add(matvec(Why, h1), by.data);
+        std::vector<float> p = softmax(y);
+
+        xs.push_back(x);
+        hs.push_back(h1);
+        ps.push_back(p);
+
+       total_loss += cross_entropy(p, data[t + 1]);
+    }
+
+    std::cout << "loss: " << total_loss / seq_len << "\n";
 
     return 0;
 }
