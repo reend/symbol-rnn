@@ -6,6 +6,7 @@
 #include <set>
 #include <algorithm>
 #include <cmath>
+#include <cblas.h>
 
 std::vector<float> one_hot(int idx, int vocab_size) {
     std::vector<float> v(vocab_size, 0.0f);
@@ -28,11 +29,19 @@ void randomize(Matrix& m, float scale) {
         v = ((float)rand() / RAND_MAX * 2 - 1) * scale;
 }
 
-std::vector<float> matvec(const Matrix& m, const std::vector<float>& v) {
+// version without openblas
+std::vector<float> local_matvec(const Matrix& m, const std::vector<float>& v) {
     std::vector<float> out(m.rows, 0.0f);
     for (int r = 0; r < m.rows; r++)
         for (int c = 0; c < m.cols; c++)
             out[r] += m.at(r, c) * v[c];
+    return out;
+}
+
+std::vector<float> matvec(const Matrix& m, const std::vector<float>& v) {
+    std::vector<float> out(m.rows, 0.0f);
+    cblas_sgemv(CblasRowMajor, CblasNoTrans, m.rows, m.cols, 1.0f,
+                m.data.data(), m.cols, v.data(), 1, 0.0f, out.data(), 1);
     return out;
 }
 
@@ -80,7 +89,8 @@ float cross_entropy(const std::vector<float>& probs, int target) {
     return -std::log(probs[target] + 1e-8f);
 }
 
-Matrix outer(const std::vector<float>& a, const std::vector<float>& b) {
+// version without openblas
+Matrix local_outer(const std::vector<float>& a, const std::vector<float>& b) {
     Matrix out(a.size(), b.size());
     for (int i = 0; i < a.size(); i++)
         for (int j = 0; j < b.size(); j++)
@@ -88,11 +98,26 @@ Matrix outer(const std::vector<float>& a, const std::vector<float>& b) {
     return out;
 }
 
-std::vector<float> matvec_T(const Matrix& m, const std::vector<float>& v) {
+Matrix outer(const std::vector<float>& a, const std::vector<float>& b) {
+    Matrix out(a.size(), b.size());
+    cblas_sger(CblasRowMajor, a.size(), b.size(), 1.0f,
+               a.data(), 1, b.data(), 1, out.data.data(), b.size());
+    return out;
+}
+
+// version without openblas
+std::vector<float> local_matvec_T(const Matrix& m, const std::vector<float>& v) {
     std::vector<float> out(m.cols, 0.0f);
     for (int r = 0; r < m.rows; r++)
         for (int c = 0; c < m.cols; c++)
             out[c] += m.at(r, c) * v[r];
+    return out;
+}
+
+std::vector<float> matvec_T(const Matrix& m, const std::vector<float>& v) {
+    std::vector<float> out(m.cols, 0.0f);
+    cblas_sgemv(CblasRowMajor, CblasTrans, m.rows, m.cols, 1.0f,
+                m.data.data(), m.cols, v.data(), 1, 0.0f, out.data(), 1);
     return out;
 }
 
