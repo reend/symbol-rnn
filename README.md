@@ -1,4 +1,4 @@
-# Vanilla RNN in C++
+# RNN symbol predictor
 
 A from-scratch character-level Recurrent Neural Network trained on Shakespeare's plays. No ML frameworks — only standard C++ and OpenBLAS for BLAS-accelerated matrix operations.
 
