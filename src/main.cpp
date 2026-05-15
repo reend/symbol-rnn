@@ -138,13 +138,17 @@ int main() {
     for (int epoch = 0; epoch < 100; epoch++) {
 
     std::vector<float> h(hidden_size, 0.0f);
+    float total_loss = 0.0f;
+    int steps = 0;
+
+    for (int pos = 0; pos + seq_len + 1 < (int)data.size(); pos += seq_len) {
+
     std::vector<std::vector<float>> xs, hs, ps;
     hs.push_back(h);
-    float total_loss = 0.0f;
 
     for (int t = 0; t < seq_len; t++) {
 
-        std::vector<float> x = one_hot(data[t], vocab_size);
+        std::vector<float> x = one_hot(data[pos + t], vocab_size);
 
         std::vector<float> a1 = matvec(Wxh, x);
         std::vector<float> a2 = matvec(Whh, hs.back());
@@ -158,10 +162,11 @@ int main() {
         hs.push_back(h1);
         ps.push_back(p);
 
-       total_loss += cross_entropy(p, data[t + 1]);
+       total_loss += cross_entropy(p, data[pos + t + 1]);
     }
 
-    std::cout << "epoch " << epoch + 1 << " loss: " << total_loss / seq_len << "\n";
+    h = hs.back();
+    steps++;
 
     // gradients of matrices
 
@@ -176,7 +181,7 @@ int main() {
     for (int t = seq_len - 1; t >= 0; t --) 
     {
         auto dy = ps[t];
-        dy[data[t + 1]] -= 1.0f;
+        dy[data[pos + t + 1]] -= 1.0f;
 
         mat_add(dWhy, outer(dy, hs[t + 1]));
         for (int i = 0; i < vocab_size; i++) 
@@ -212,6 +217,10 @@ int main() {
     clip_and_update(Why, dWhy);
     clip_and_update(bh,  dbh);
     clip_and_update(by,  dby);
+
+    } // end pos
+
+    std::cout << "epoch " << epoch + 1 << " loss: " << total_loss / steps / seq_len << "\n";
 
     } // end epoch
 
